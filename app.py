@@ -278,7 +278,7 @@ with col1:
     scan_btn=st.button("🔍 Scanner (Données Twelve Data H1)",type="primary",use_container_width=True)
 with col2:
     if scan_btn:
-        st.info(f"🔄 Scan en cours (Twelve Data H1)...");pr_res=[];pb=st.progress(0).;stx=st.empty()
+        st.info(f"🔄 Scan en cours (Twelve Data H1)...");pr_res=[];pb=st.progress(0);stx=st.empty()
         if pair_to_debug != "Aucune":
             st.subheader(f"Données OHLC pour {pair_to_debug} (Twelve Data):")
             debug_data = get_data_twelve(pair_to_debug, interval_td="4h", period_days=5)
