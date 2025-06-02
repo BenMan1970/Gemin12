@@ -50,6 +50,7 @@ def heiken_ashi_pine(dfo):
     return ha['HA_Open'],ha['HA_Close']
 def smoothed_heiken_ashi_pine(dfo,l1=10,l2=10):
     eo=ema(dfo['Open'],l1);eh=ema(dfo['High'],l1);el=ema(dfo['Low'],l1);ec=ema(dfo['Close'],l1)
+    hai=pd.DataFrame({'Open':eo,'High':eh,'Low':el,'Close':ec},index=dfo.index)
     hao_i,hac_i=heiken_ashi_pine(hai);sho=ema(hao_i,l2);shc=ema(hac_i,l2);return sho,shc
 def ichimoku_pine_signal(df_high, df_low, df_close, tenkan_p=9, kijun_p=26, senkou_b_p=52):
     min_len_req=max(tenkan_p,kijun_p,senkou_b_p)
@@ -95,7 +96,7 @@ def get_data_twelve(symbol_td: str, interval_td: str = '4h', period_days: int = 
             
             data = response.json()
             if data.get('status') != 'ok' or not data.get('values'):
-                st.warning(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
+                st.warning(f"Twelve Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
                 print(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
                 return None
 
@@ -129,6 +130,8 @@ def calculate_all_signals_pine(data):
     if not all(col in data.columns for col in required_cols):
         print(f"calculate_all_signals: Colonnes OHLC manquantes.")
         return None
+    
+ Rheinforcement learning -based agent that learns to navigate a maze.
     
     close = data['Close']
     high = data['High']
@@ -171,11 +174,10 @@ def calculate_all_signals_pine(data):
                 bear_confluences += 1
                 signal_details_pine['RSI'] = f"▼({rsi_val:.0f})"
             else:
-                signal /
-
-_details_pine['RSI'] = f"─({rsi_val:.0f})"
+                signal_details_pine['RSI'] = f"─({rsi_val:.0f})"
         else:
             signal_details_pine['RSI'] = "N/A"
+            signal_details_pine['RSI_val'] = "N/A"
     except Exception as e:
         signal_details_pine['RSI'] = "ErrRSI"
         signal_details_pine['RSI_val'] = "N/A"
@@ -194,6 +196,7 @@ _details_pine['RSI'] = f"─({rsi_val:.0f})"
                 signal_details_pine['ADX'] = f"✖({adx_val:.0f})"
         else:
             signal_details_pine['ADX'] = "N/A"
+            signal_details_pine['ADX_val'] = "N/A"
     except Exception as e:
         signal_details_pine['ADX'] = "ErrADX"
         signal_details_pine['ADX_val'] = "N/A"
@@ -300,9 +303,14 @@ with col2:
             d_h1_td=get_data_twelve(symbol_td_scan, interval_td="4h", period_days=15)
             if d_h1_td is not None:
                 sigs=calculate_all_signals_pine(d_h1_td)
-                if sigs:strs=get_stars_pine(sigs['confluence_P']);rd={'Paire':pnd,'Direction':sigs['direction_P'],'Conf. (0-6)':sigs['confluence_P'],'Étoiles':strs,'RSI':sigs['rsi_P'],'ADX':sigs['adx_P'],'Bull':sigs['bull_P'],'Bear':sigs['bear_P'],'details':sigs['signals_P']};pr_res.append(rd)
-                else:pr_res.append({'Paire':pnd,'Direction':'ERREUR CALCUL','Conf. (0-6)':0,'Étoiles':'N/A','RSI':'N/A','ADX':'N/A','Bull':0,'Bear':0,'details':{'Info':'Calcul signaux (Twelve Data) échoué'}})
-            else:pr_res.append({'Paire':pnd,'Direction':'ERREUR DONNÉES TD','Conf. (0-6)':0,'Étoiles':'N/A','RSI':'N/A','ADX':'N/A','Bull':0,'Bear':0,'details':{'Info':'Données Twelve Data non dispo/symb invalide(logs serveur)'}})
+                if sigs:
+                    strs=get_stars_pine(sigs['confluence_P'])
+                    rd={'Paire':pnd,'Direction':sigs['direction_P'],'Conf. (0-6)':sigs['confluence_P'],'Étoiles':strs,'RSI':sigs['rsi_P'],'ADX':sigs['adx_P'],'Bull':sigs['bull_P'],'Bear':sigs['bear_P'],'details':sigs['signals_P']}
+                    pr_res.append(rd)
+                else:
+                    pr_res.append({'Paire':pnd,'Direction':'ERREUR CALCUL','Conf. (0-6)':0,'Étoiles':'N/A','RSI':'N/A','ADX':'N/A','Bull':0,'Bear':0,'details':{'Info':'Calcul signaux (Twelve Data) échoué'}})
+            else:
+                pr_res.append({'Paire':pnd,'Direction':'ERREUR DONNÉES TD','Conf. (0-6)':0,'Étoiles':'N/A','RSI':'N/A','ADX':'N/A','Bull':0,'Bear':0,'details':{'Info':'Données Twelve Data non dispo/symb invalide(logs serveur)'}})
             time.sleep(7.5)  # Respect Twelve Data rate limits (free plan: 8 requests/min -> 60/8 = 7.5 seconds per request)
         pb.empty();stx.empty()
         if pr_res:
@@ -323,5 +331,5 @@ with col2:
             else:st.warning(f"❌ Aucune paire avec critères filtrage (Twelve Data). Vérifiez erreurs données/symbole.")
         else:st.error("❌ Aucune paire traitée (Twelve Data). Vérifiez logs serveur.")
 with st.expander("ℹ️ Comment ça marche (Logique Pine Script avec Données Twelve Data)"):
-    st.markdown("""**6 Signaux Confluence:** HMA(20),RSI(10),ADX(14)>=20,HA(Simple),SHA(10,10),Ichi(9,26,52).**Comptage & Étoiles:**Pine.**Source:**Twelve Data API.""")
+    st.markdown("""**6 Signaux Confluence:** HMA(20),RSI(10),AD(14)>=20,HA(Simple),SHA(10,10),Ichi(9,26,52).**Comptage & Étoiles:**Pine.**Source:**Twelve Data API.""")
 st.caption("Scanner H1 (Twelve Data). Multi-TF non actif.")
