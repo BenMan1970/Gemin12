@@ -20,11 +20,10 @@ st.set_page_config(page_title="Scanner Confluence Forex (Twelve Data)", page_ico
 st.title("🔍 Scanner Confluence Forex Premium (Données Twelve Data)")
 st.markdown("*Utilisation de l'API Twelve Data pour les données de marché H1*")
 
-# Forex pairs in Twelve Data format with alternatives
+# Forex pairs - Limited to major pairs only
 FOREX_PAIRS_TD = [
     'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF',
-    'AUD/USD', 'USD/CAD', 'NZD/USD', 'EUR/JPY',
-    'USD/ZAR', 'USD/SGD'  # Replaced GBP/JPY and EUR/GBP with available pairs
+    'AUD/USD', 'USD/CAD', 'NZD/USD'
 ]
 
 def ema(s, p): return s.ewm(span=p, adjust=False).mean()
@@ -51,7 +50,6 @@ def heiken_ashi_pine(dfo):
     return ha['HA_Open'],ha['HA_Close']
 def smoothed_heiken_ashi_pine(dfo,l1=10,l2=10):
     eo=ema(dfo['Open'],l1);eh=ema(dfo['High'],l1);el=ema(dfo['Low'],l1);ec=ema(dfo['Close'],l1)
-    hai=pd.DataFrame({'Open':eo,'High':eh,'Low':el,'Close':ec},index=dfo.index)
     hao_i,hac_i=heiken_ashi_pine(hai);sho=ema(hao_i,l2);shc=ema(hac_i,l2);return sho,shc
 def ichimoku_pine_signal(df_high, df_low, df_close, tenkan_p=9, kijun_p=26, senkou_b_p=52):
     min_len_req=max(tenkan_p,kijun_p,senkou_b_p)
@@ -65,53 +63,63 @@ def ichimoku_pine_signal(df_high, df_low, df_close, tenkan_p=9, kijun_p=26, senk
     return sig
 
 @st.cache_data(ttl=300)
-def get_data_twelve(symbol_td: str, interval_td: str = '4h', period_days: int = 15):
-    print(f"\n--- Début get_data_twelve: sym='{symbol_td}', interval='{interval_td}', period='{period_days}d' ---")
-    try:
-        api_key = st.secrets.get("TWELVE_DATA_API_KEY", None)
-        if not api_key:
-            st.error("Clé API Twelve Data manquante. Ajoutez-la dans st.secrets['TWELVE_DATA_API_KEY'].")
-            print("Erreur: Clé API Twelve Data manquante.")
+def get_data_twelve(symbol_td: str, interval_td: str = '4h', period_days: int = 15, max_retries: int = 3):
+    retry_count = 0
+    while retry_count < max_retries:
+        print(f"\n--- Début get_data_twelve: sym='{symbol_td}', interval='{interval_td}', period='{period_days}d', tentative {retry_count + 1}/{max_retries} ---")
+        try:
+            api_key = st.secrets.get("TWELVE_DATA_API_KEY", None)
+            if not api_key:
+                st.error("Clé API Twelve Data manquante. Ajoutez-la dans st.secrets['TWELVE_DATA_API_KEY'].")
+                print("Erreur: Clé API Twelve Data manquante.")
+                return None
+
+            # Calculate start and end dates
+            end_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            start_date = (datetime.now(timezone.utc) - timedelta(days=period_days)).strftime('%Y-%m-%d')
+
+            # Twelve Data API endpoint
+            url = f"https://api.twelvedata.com/time_series?symbol={symbol_td}&interval={interval_td}&start_date={start_date}&end_date={end_date}&apikey={api_key}"
+            response = requests.get(url)
+            
+            if response.status_code != 200:
+                if response.status_code == 429:  # Rate limit exceeded
+                    st.warning(f"Limite de requêtes dépassée pour {symbol_td}. Attente avant réessai...")
+                    print(f"Limite de requêtes dépassée pour {symbol_td}. Code 429. Attente de 60 secondes.")
+                    time.sleep(60)  # Attendre 1 minute avant de réessayer
+                    retry_count += 1
+                    continue
+                st.error(f"Erreur API Twelve Data pour {symbol_td}: Code {response.status_code}")
+                print(f"Erreur API Twelve Data pour {symbol_td}: Code {response.status_code}\n{response.text}")
+                return None
+            
+            data = response.json()
+            if data.get('status') != 'ok' or not data.get('values'):
+                st.warning(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
+                print(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
+                return None
+
+            # Convert to DataFrame
+            df = pd.DataFrame(data['values'])
+            df['datetime'] = pd.to_datetime(df['datetime'], utc=True)
+            df.set_index('datetime', inplace=True)
+            df = df[['open', 'high', 'low', 'close']].astype(float)
+            df.columns = ['Open', 'High', 'Low', 'Close']  # Match yfinance column names
+            df = df.sort_index()  # Ensure chronological order
+
+            if len(df) < 50:  # Reduced from 100 to 50
+                st.warning(f"Twelve Data: Données insuffisantes pour {symbol_td} ({len(df)} barres).")
+                print(f"Twelve Data: Données insuffisantes pour {symbol_td} ({len(df)} barres).")
+                return None
+
+            print(f"Données pour {symbol_td} OK. Retour de {len(df.dropna())} lignes après dropna.\n--- Fin get_data_twelve {symbol_td} ---\n")
+            return df.dropna()
+        except Exception as e:
+            st.error(f"Erreur Twelve Data pour {symbol_td}: {type(e).__name__} - {e}")
+            print(f"ERREUR Twelve Data pour {symbol_td}:\n{traceback.format_exc()}")
             return None
-
-        # Calculate start and end dates
-        end_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        start_date = (datetime.now(timezone.utc) - timedelta(days=period_days)).strftime('%Y-%m-%d')
-
-        # Twelve Data API endpoint
-        url = f"https://api.twelvedata.com/time_series?symbol={symbol_td}&interval={interval_td}&start_date={start_date}&end_date={end_date}&apikey={api_key}"
-        response = requests.get(url)
-        
-        if response.status_code != 200:
-            st.error(f"Erreur API Twelve Data pour {symbol_td}: Code {response.status_code}")
-            print(f"Erreur API Twelve Data pour {symbol_td}: Code {response.status_code}\n{response.text}")
-            return None
-        
-        data = response.json()
-        if data.get('status') != 'ok' or not data.get('values'):
-            st.warning(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
-            print(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
-            return None
-
-        # Convert to DataFrame
-        df = pd.DataFrame(data['values'])
-        df['datetime'] = pd.to_datetime(df['datetime'], utc=True)
-        df.set_index('datetime', inplace=True)
-        df = df[['open', 'high', 'low', 'close']].astype(float)
-        df.columns = ['Open', 'High', 'Low', 'Close']  # Match yfinance column names
-        df = df.sort_index()  # Ensure chronological order
-
-        if len(df) < 50:  # Reduced from 100 to 50
-            st.warning(f"Twelve Data: Données insuffisantes pour {symbol_td} ({len(df)} barres).")
-            print(f"Twelve Data: Données insuffisantes pour {symbol_td} ({len(df)} barres).")
-            return None
-
-        print(f"Données pour {symbol_td} OK. Retour de {len(df.dropna())} lignes après dropna.\n--- Fin get_data_twelve {symbol_td} ---\n")
-        return df.dropna()
-    except Exception as e:
-        st.error(f"Erreur Twelve Data pour {symbol_td}: {type(e).__name__} - {e}")
-        print(f"ERREUR Twelve Data pour {symbol_td}:\n{traceback.format_exc()}")
-        return None
+    st.error(f"Échec de récupération des données pour {symbol_td} après {max_retries} tentatives.")
+    return None
 
 def calculate_all_signals_pine(data):
     if data is None or len(data) < 60:
@@ -163,7 +171,9 @@ def calculate_all_signals_pine(data):
                 bear_confluences += 1
                 signal_details_pine['RSI'] = f"▼({rsi_val:.0f})"
             else:
-                signal_details_pine['RSI'] = f"─({rsi_val:.0f})"
+                signal /
+
+_details_pine['RSI'] = f"─({rsi_val:.0f})"
         else:
             signal_details_pine['RSI'] = "N/A"
     except Exception as e:
@@ -293,7 +303,7 @@ with col2:
                 if sigs:strs=get_stars_pine(sigs['confluence_P']);rd={'Paire':pnd,'Direction':sigs['direction_P'],'Conf. (0-6)':sigs['confluence_P'],'Étoiles':strs,'RSI':sigs['rsi_P'],'ADX':sigs['adx_P'],'Bull':sigs['bull_P'],'Bear':sigs['bear_P'],'details':sigs['signals_P']};pr_res.append(rd)
                 else:pr_res.append({'Paire':pnd,'Direction':'ERREUR CALCUL','Conf. (0-6)':0,'Étoiles':'N/A','RSI':'N/A','ADX':'N/A','Bull':0,'Bear':0,'details':{'Info':'Calcul signaux (Twelve Data) échoué'}})
             else:pr_res.append({'Paire':pnd,'Direction':'ERREUR DONNÉES TD','Conf. (0-6)':0,'Étoiles':'N/A','RSI':'N/A','ADX':'N/A','Bull':0,'Bear':0,'details':{'Info':'Données Twelve Data non dispo/symb invalide(logs serveur)'}})
-            time.sleep(0.5)  # Respect Twelve Data rate limits (free plan: ~8 requests/min)
+            time.sleep(7.5)  # Respect Twelve Data rate limits (free plan: 8 requests/min -> 60/8 = 7.5 seconds per request)
         pb.empty();stx.empty()
         if pr_res:
             dfa=pd.DataFrame(pr_res);dfd=dfa[dfa['Conf. (0-6)']>=min_conf].copy()if not show_all else dfa.copy()
