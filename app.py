@@ -96,7 +96,7 @@ def get_data_twelve(symbol_td: str, interval_td: str = '4h', period_days: int = 
             
             data = response.json()
             if data.get('status') != 'ok' or not data.get('values'):
-                st.warning(f"Twelve Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
+                st.warning(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
                 print(f"Twelve Data: Données insuffisantes ou vides pour {symbol_td}. Réponse: {data}")
                 return None
 
@@ -130,8 +130,6 @@ def calculate_all_signals_pine(data):
     if not all(col in data.columns for col in required_cols):
         print(f"calculate_all_signals: Colonnes OHLC manquantes.")
         return None
-    
- Rheinforcement learning -based agent that learns to navigate a maze.
     
     close = data['Close']
     high = data['High']
@@ -285,7 +283,7 @@ def get_stars_pine(confluence_value):
 
 col1,col2=st.columns([1,3])
 with col1:
-    st.subheader("⚙️ Paramètres");min_conf=st.selectbox("Confluence min (0-6)",options=[0,1,2,3,4,5,6],index=3,format_func=lambda x:f"{x} (confluence)")
+    st.subheader("⚙️ ParamSHètres");min_conf=st.selectbox("Confluence min (0-6)",options=[0,1,2,3,4,5,6],index=3,format_func=lambda x:f"{x} (confluence)")
     show_all=st.checkbox("Voir toutes les paires (ignorer filtre)")
     pair_to_debug = st.selectbox("🔍 Afficher OHLC pour:", ["Aucune"] + FOREX_PAIRS_TD, index=0)
     scan_btn=st.button("🔍 Scanner (Données Twelve Data H1)",type="primary",use_container_width=True)
@@ -331,5 +329,5 @@ with col2:
             else:st.warning(f"❌ Aucune paire avec critères filtrage (Twelve Data). Vérifiez erreurs données/symbole.")
         else:st.error("❌ Aucune paire traitée (Twelve Data). Vérifiez logs serveur.")
 with st.expander("ℹ️ Comment ça marche (Logique Pine Script avec Données Twelve Data)"):
-    st.markdown("""**6 Signaux Confluence:** HMA(20),RSI(10),AD(14)>=20,HA(Simple),SHA(10,10),Ichi(9,26,52).**Comptage & Étoiles:**Pine.**Source:**Twelve Data API.""")
+    st.markdown("""**6 Signaux Confluence:** HMA(20),RSI(10),ADX(14)>=20,HA(Simple),SHA(10,10),Ichi(9,26,52).**Comptage & Étoiles:**Pine.**Source:**Twelve Data API.""")
 st.caption("Scanner H1 (Twelve Data). Multi-TF non actif.")
