@@ -276,6 +276,8 @@ def get_stars_pine(confluence_value):
     if confluence_value == 6: return "⭐⭐⭐⭐⭐⭐"
     elif confluence_value == 5: return "⭐⭐⭐⭐⭐"
     elif confluence_value == 4: return "⭐⭐⭐⭐"
+    elif confluence_value == 5: return "⭐⭐⭐⭐⭐"
+    elif confluence_value == 4: return "⭐⭐⭐⭐"
     elif confluence_value == 3: return "⭐⭐⭐"
     elif confluence_value == 2: return "⭐⭐"
     elif confluence_value == 1: return "⭐"
@@ -283,7 +285,7 @@ def get_stars_pine(confluence_value):
 
 col1,col2=st.columns([1,3])
 with col1:
-    st.subheader("⚙️ ParamSHètres");min_conf=st.selectbox("Confluence min (0-6)",options=[0,1,2,3,4,5,6],index=3,format_func=lambda x:f"{x} (confluence)")
+    st.subheader("⚙️ Paramètres");min_conf=st.selectbox("Confluence min (0-6)",options=[0,1,2,3,4,5,6],index=3,format_func=lambda x:f"{x} (confluence)")
     show_all=st.checkbox("Voir toutes les paires (ignorer filtre)")
     pair_to_debug = st.selectbox("🔍 Afficher OHLC pour:", ["Aucune"] + FOREX_PAIRS_TD, index=0)
     scan_btn=st.button("🔍 Scanner (Données Twelve Data H1)",type="primary",use_container_width=True)
@@ -326,8 +328,4 @@ with col2:
                         dc=st.columns(6);so=['HMA','RSI','ADX','HA','SHA','Ichi']
                         for idx,sk in enumerate(so):dc[idx].metric(label=sk,value=sm.get(sk,"N/P"))
                         st.divider()
-            else:st.warning(f"❌ Aucune paire avec critères filtrage (Twelve Data). Vérifiez erreurs données/symbole.")
-        else:st.error("❌ Aucune paire traitée (Twelve Data). Vérifiez logs serveur.")
-with st.expander("ℹ️ Comment ça marche (Logique Pine Script avec Données Twelve Data)"):
-    st.markdown("""**6 Signaux Confluence:** HMA(20),RSI(10),ADX(14)>=20,HA(Simple),SHA(10,10),Ichi(9,26,52).**Comptage & Étoiles:**Pine.**Source:**Twelve Data API.""")
-st.caption("Scanner H1 (Twelve Data). Multi-TF non actif.")
+            else:st.warning(f"❌ Aucune paire avec critères filtrage (Twelve Data). Vérifiez
