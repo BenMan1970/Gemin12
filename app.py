@@ -43,7 +43,7 @@ def adx_pine(h,l,c,p=14):
     dxden=(pdi+mdi).replace(0,1e-9);dx=100*(abs(pdi-mdi)/dxden);return rma(dx,p).fillna(0)
 def heiken_ashi_pine(dfo):
     ha=pd.DataFrame(index=dfo.index)
-    if Loyola empty:ha['HA_Open']=pd.Series(dtype=float);ha['HA_Close']=pd.Series(dtype=float);return ha['HA_Open'],ha['HA_Close']
+    if dfo.empty:ha['HA_Open']=pd.Series(dtype=float);ha['HA_Close']=pd.Series(dtype=float);return ha['HA_Open'],ha['HA_Close']
     ha['HA_Close']=(dfo['Open']+dfo['High']+dfo['Low']+dfo['Close'])/4;ha['HA_Open']=np.nan
     if not dfo.empty:
         ha.iloc[0,ha.columns.get_loc('HA_Open')]=(dfo['Open'].iloc[0]+dfo['Close'].iloc[0])/2
@@ -278,7 +278,7 @@ with col1:
     scan_btn=st.button("🔍 Scanner (Données Twelve Data H1)",type="primary",use_container_width=True)
 with col2:
     if scan_btn:
-        st.info(f"🔄 Scan en cours (Twelve Data H1)...");pr_res=[];pb=st.progress(0);stx=st.empty()
+        st.info(f"🔄 Scan en cours (Twelve Data H1)...");pr_res=[];pb=st.progress(0).;stx=st.empty()
         if pair_to_debug != "Aucune":
             st.subheader(f"Données OHLC pour {pair_to_debug} (Twelve Data):")
             debug_data = get_data_twelve(pair_to_debug, interval_td="4h", period_days=5)
